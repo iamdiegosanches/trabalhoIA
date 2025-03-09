@@ -119,7 +119,6 @@ def busca_custo_uniforme(cost_matrix, start, end):
     return None, float('inf')  # Retorna None se não encontrar caminho
 
 def heuristica_manhattan_simples(cost_matrix, end):
-    """Constroi a heurística mangattan simples para o A*, chamando de simples pois essa não considera as paredes"""
     rows, cols = len(cost_matrix), len(cost_matrix[0])
     heuristic = [[0 for _ in range(cols)] for _ in range(rows)]
 
@@ -131,8 +130,7 @@ def heuristica_manhattan_simples(cost_matrix, end):
 
     return heuristic
 
-def heuristica_com_acesso_real(cost_matrix, end):
-    """Calcula a heurística considerando paredes e acessos reais (com BFS)."""
+def heuristica_manhattan(cost_matrix, end):
     rows, cols = len(cost_matrix), len(cost_matrix[0])
     heuristic = [[float('inf') for _ in range(cols)] for _ in range(rows)]
     queue = deque([end])  # Começa do destino
@@ -154,7 +152,7 @@ def heuristica_com_acesso_real(cost_matrix, end):
 
 def a_star(cost_matrix, start, end):
     rows, cols = len(cost_matrix), len(cost_matrix[0])
-    heuristic = heuristica_com_acesso_real(cost_matrix, end)  # matriz de heurísticas
+    heuristic = heuristica_manhattan(cost_matrix, end)  # matriz de heurísticas
 
     priority_queue = []
     # (custo acumulado + heurística, custo acumulado, posição atual)
@@ -202,6 +200,8 @@ def main():
     map_file = "laboratorio/laboratorio.txt"
     lab_map = read_map(map_file)
 
+    custo_total = 0
+
     screen = initialize_game_window(WIDTH, HEIGHT)
 
     cost_matrix = gen_cost_matrix(lab_map)
@@ -227,6 +227,7 @@ def main():
             break
 
         print(f"Caminho encontrado: {caminho}, Custo: {custo}")
+        custo_total = custo_total + custo
 
         for pos in caminho[1:]:
             update_map(lab_map, current_pos, pos)
@@ -237,6 +238,8 @@ def main():
             draw_map(screen, lab_map)
             pygame.display.flip()
             pygame.time.wait(100)  # Pausa para animar a movimentação
+
+    print(f"Custo Total: {custo_total}")
 
     running = True
     while running:
