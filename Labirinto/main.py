@@ -11,6 +11,7 @@ COLORS = {
     '*': (0, 0, 120),      # Piso molhado (azul)
     ' ': (200, 200, 200),  # Piso seco (cinza claro)
     '|': (139, 69, 19),    # Porta (marrom)
+    '!': (139, 69, 19),    # Porta Saida (marrom)
     '#': (50, 50, 50),     # Parede (cinza escuro)
     'E': (0, 255, 0),      # Eleven (verde)
     'D': (255, 255, 0),    # Dustin (amarelo)
@@ -25,6 +26,7 @@ terrains = {
     '*': 3,  # Piso molhado
     ' ': 1,  # Piso seco
     '|': 4,  # Porta
+    '!': 4,  # Saida (porta)
     '#': float('inf')  # Parede (intransponível)
 }
 
@@ -214,7 +216,7 @@ def main():
         find_position(lab_map, 'M'),
         find_position(lab_map, 'L'),
         find_position(lab_map, 'W'),
-        (40, 40)  # Saída
+        find_position(lab_map, '!')  # Saída
     ]
 
     for objetivo in objetivos:
