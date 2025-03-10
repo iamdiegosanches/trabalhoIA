@@ -1,5 +1,6 @@
 import heapq
 import pygame
+import math
 from collections import deque
 
 # Globais
@@ -80,46 +81,6 @@ def initialize_game_window(width, height):
     pygame.display.set_caption("Mapa do Laboratório")
     return screen
 
-def busca_custo_uniforme(cost_matrix, start, end):
-    rows, cols = len(cost_matrix), len(cost_matrix[0])
-    visited = set()
-    priority_queue = []
-    heapq.heappush(priority_queue, (0, start))  # (custo acumulado, posição atual)
-
-    # Guarda os predecessores para reconstruir o caminho
-    came_from = {}
-    came_from[start] = None
-
-    while priority_queue:
-        current_cost, current_pos = heapq.heappop(priority_queue)
-
-        if current_pos in visited:
-            continue
-        visited.add(current_pos)
-
-        # Se alcançar o objetivo, reconstruir o caminho
-        if current_pos == end:
-            path = []
-            while current_pos is not None:
-                path.append(current_pos)
-                current_pos = came_from[current_pos]
-            return path[::-1], current_cost
-
-        y, x = current_pos
-        neighbors = [
-            (y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)  # Vizinhos nas direções cardinais
-        ]
-
-        for ny, nx in neighbors:
-            if 0 <= ny < rows and 0 <= nx < cols and (ny, nx) not in visited:
-                cost = cost_matrix[ny][nx]
-                if cost is not float('inf'):
-                    if type(cost) is str: cost = 1
-                    heapq.heappush(priority_queue, (current_cost + cost, (ny, nx)))
-                    came_from[(ny, nx)] = (y, x)
-
-    return None, float('inf')  # Retorna None se não encontrar caminho
-
 def heuristica_manhattan_simples(cost_matrix, end):
     rows, cols = len(cost_matrix), len(cost_matrix[0])
     heuristic = [[0 for _ in range(cols)] for _ in range(rows)]
@@ -153,50 +114,64 @@ def heuristica_manhattan(cost_matrix, end):
     return heuristic
 
 def a_star(cost_matrix, start, end):
-    rows, cols = len(cost_matrix), len(cost_matrix[0])
-    heuristic = heuristica_manhattan(cost_matrix, end)  # matriz de heurísticas
+    """Implementa o algoritmo A* para encontrar o caminho de start até end."""
+    start_y, start_x = start
+    end_y, end_x = end
 
-    priority_queue = []
-    # (custo acumulado + heurística, custo acumulado, posição atual)
-    heapq.heappush(priority_queue, (0 + heuristic[start[0]][start[1]], 0, start))
+    # Verifica se o ponto de início ou fim é uma parede
+    if cost_matrix[start_y][start_x] == math.inf or cost_matrix[end_y][end_x] == math.inf:
+        return None, math.inf  # Caminho inválido
 
-    # Guarda os custos mínimos e os predecessores
-    cost_so_far = {}
-    came_from = {}
+    # Calcula a matriz de heurísticas
+    heuristic = heuristica_manhattan(cost_matrix, end)
 
-    cost_so_far[start] = 0
-    came_from[start] = None
+    # Inicializa a fila de prioridade (fronteira)
+    frontier = []
+    heapq.heappush(frontier, (0, start_y, start_x))
 
-    while priority_queue:
-        _, current_cost, current_pos = heapq.heappop(priority_queue)
+    # Dicionário para armazenar o custo do caminho até cada célula
+    cost_so_far = {(start_y, start_x): 0}
 
-        if current_cost > cost_so_far[current_pos]:
-            continue
+    # Dicionário para armazenar o caminho percorrido
+    came_from = {(start_y, start_x): None}
 
-        # Se alcançar o objetivo, reconstrói o caminho e retorna
-        if current_pos == end:
-            path = []
-            while current_pos is not None:
-                path.append(current_pos)
-                current_pos = came_from[current_pos]
-            return path[::-1], cost_so_far[end]
+    while frontier:
+        _, current_y, current_x = heapq.heappop(frontier)
 
-        y, x = current_pos
-        neighbors = [(y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)]  # Vizinhos nas direções cardinais
+        # Verifica se chegou ao objetivo
+        if (current_y, current_x) == (end_y, end_x):
+            break
 
-        for ni, nj in neighbors:
-            if 0 <= ni < rows and 0 <= nj < cols:
-                cost = cost_matrix[ni][nj]
-                if cost != float('inf'):  # Verifica se não é uma parede
-                    if isinstance(cost, str): cost = 1  # Se for uma letra, custo é 1
-                    new_cost = current_cost + cost
-                    if (ni, nj) not in cost_so_far or new_cost < cost_so_far[(ni, nj)]:
-                        cost_so_far[(ni, nj)] = new_cost
-                        priority = new_cost + heuristic[ni][nj]
-                        heapq.heappush(priority_queue, (priority, new_cost, (ni, nj)))
-                        came_from[(ni, nj)] = current_pos
+        # Explora os vizinhos
+        for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            next_y, next_x = current_y + dy, current_x + dx
 
-    return None, float('inf')  # Não encontrou o caminho
+            # Verifica se está dentro dos limites da matriz
+            if 0 <= next_y < len(cost_matrix) and 0 <= next_x < len(cost_matrix[0]):
+                # Verifica se não é uma parede
+                if cost_matrix[next_y][next_x] == math.inf:
+                    continue
+
+                # Calcula o custo do caminho até o próximo nó
+                new_cost = cost_so_far[(current_y, current_x)] + (1 if isinstance(cost_matrix[next_y][next_x], str) else cost_matrix[next_y][next_x])
+
+                # Se o próximo nó não foi visitado ou se encontrou um caminho mais barato
+                if (next_y, next_x) not in cost_so_far or new_cost < cost_so_far[(next_y, next_x)]:
+                    cost_so_far[(next_y, next_x)] = new_cost
+                    priority = new_cost + heuristic[next_y][next_x]
+                    heapq.heappush(frontier, (priority, next_y, next_x))
+                    came_from[(next_y, next_x)] = (current_y, current_x)
+
+    # Reconstruir o caminho
+    path = []
+    current = (end_y, end_x)
+    while current is not None:
+        path.append(current)
+        current = came_from[current]
+    path.reverse()
+
+    # Retorna o caminho e o custo total
+    return path, cost_so_far.get((end_y, end_x), math.inf)
 
 def main():
     map_file = "laboratorio/laboratorio.txt"
@@ -213,8 +188,8 @@ def main():
 
     objetivos = [
         find_position(lab_map, 'D'),
-        find_position(lab_map, 'M'),
         find_position(lab_map, 'L'),
+        find_position(lab_map, 'M'),
         find_position(lab_map, 'W'),
         find_position(lab_map, '!')  # Saída
     ]
