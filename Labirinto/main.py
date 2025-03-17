@@ -70,9 +70,7 @@ def update_map(map_matrix, current_pos, new_pos):
     y, x = current_pos
     ny, nx = new_pos
 
-    # Marca o local atual como visitado
     map_matrix[y][x] = 'V'
-    # Move a Eleven para o novo local
     map_matrix[ny][nx] = 'E'
 
 def initialize_game_window(width, height):
@@ -85,11 +83,11 @@ def heuristica_manhattan_simples(cost_matrix, end):
     rows, cols = len(cost_matrix), len(cost_matrix[0])
     heuristic = [[0 for _ in range(cols)] for _ in range(rows)]
 
-    ey, ex = end  # Coordenadas do destino
+    ey, ex = end
 
     for y in range(rows):
         for x in range(cols):
-            heuristic[y][x] = abs(ey - y) + abs(ex - x)  # Distância de Manhattan
+            heuristic[y][x] = abs(ey - y) + abs(ex - x)
 
     return heuristic
 
@@ -114,7 +112,6 @@ def heuristica_manhattan(cost_matrix, end):
     return heuristic
 
 def a_star(cost_matrix, start, end):
-    """Implementa o algoritmo A* para encontrar o caminho de start até end."""
     start_y, start_x = start
     end_y, end_x = end
 
@@ -210,11 +207,10 @@ def main():
             update_map(lab_map, current_pos, pos)
             current_pos = pos
 
-            # Atualiza a tela
             screen.fill((0, 0, 0))
             draw_map(screen, lab_map)
             pygame.display.flip()
-            pygame.time.wait(100)  # Pausa para animar a movimentação
+            pygame.time.wait(100)
 
     print(f"Custo Total: {custo_total}")
 
