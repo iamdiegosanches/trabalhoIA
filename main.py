@@ -5,21 +5,21 @@ from collections import deque
 
 # Globais
 WIDTH = 840
-HEIGHT = 840
+HEIGHT = 900
 SQUARE_SIZE = 20
 COLORS = {
-    '-': (120, 0, 0),      # Fios soltos (vermelho)
-    '*': (0, 0, 120),      # Piso molhado (azul)
-    ' ': (200, 200, 200),  # Piso seco (cinza claro)
-    '|': (139, 69, 19),    # Porta (marrom)
-    '!': (139, 69, 19),    # Porta Saida (marrom)
-    '#': (50, 50, 50),     # Parede (cinza escuro)
+    '-': (120, 0, 0),      # Fios soltos
+    '*': (0, 0, 120),      # Piso molhado
+    ' ': (200, 200, 200),  # Piso seco
+    '|': (139, 69, 19),    # Porta
+    '!': (139, 69, 19),    # Porta Saida
+    '#': (50, 50, 50),     # Parede
     'E': (0, 255, 0),      # Eleven (verde)
     'D': (255, 255, 0),    # Dustin (amarelo)
     'M': (255, 165, 0),    # Mike (laranja)
     'L': (128, 0, 128),    # Lucas (roxo)
     'W': (0, 255, 255),    # Will (ciano)
-    'V': (100, 100, 100)   # Visitado (cinza médio)
+    'V': (100, 100, 100)   # Visitado
 }
 
 terrains = {
@@ -28,7 +28,7 @@ terrains = {
     ' ': 1,  # Piso seco
     '|': 4,  # Porta
     '!': 4,  # Saida (porta)
-    '#': float('inf')  # Parede (intransponível)
+    '#': float('inf')  # Parede (infinito)
 }
 
 def read_map(file_path):
@@ -37,7 +37,7 @@ def read_map(file_path):
 
     return [list(line.strip()) for line in lines]
 
-def draw_map(screen, map_matrix):
+def draw_map(screen, map_matrix, custo, caminho):
     for y, line in enumerate(map_matrix):
         for x, cell in enumerate(line):
             color = COLORS.get(cell, (0, 0, 0))
@@ -46,6 +46,31 @@ def draw_map(screen, map_matrix):
                 color,
                 pygame.Rect(x * SQUARE_SIZE, y * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
             )
+
+    font = pygame.font.Font(None, 36)
+
+    if custo == -1:
+        text_surface = font.render("Encontrando custo total...", True, (255, 255, 255))
+    else:
+        text_surface = font.render(f"Custo total: {custo}", True, (255, 255, 255))
+
+    if caminho is None:
+        lines = [
+            "Caminho não encontrado",
+            "Não é possível salvar todos os amigos"
+        ]
+        # Renderiza cada linha separadamente
+        text_surfaces = [font.render(line, True, (255, 0, 0)) for line in lines]
+    else:
+        text_surfaces = [font.render("", True, (255, 0, 0))]  # Texto vazio se o caminho existir
+
+    screen.blit(text_surface, (10, 850))  # Custo na posição (10, 850)
+
+    y_offset = 380  # Posição Y inicial
+    for text_surface in text_surfaces:
+        screen.blit(text_surface, (200, y_offset))
+        y_offset += 40  # Ajusta o espaçamento entre as linhas
+    # screen.blit(text_surface2, (280, 380))
 
 def find_position(map_matrix, target):
     for y, line in enumerate(map_matrix):
@@ -111,45 +136,46 @@ def heuristica_manhattan(cost_matrix, end):
 
     return heuristic
 
+# A* baseado no algoritmo de busca custo uniforme do livro de Inteligência Artificial Russell Norvig
 def a_star(cost_matrix, start, end):
     start_y, start_x = start
     end_y, end_x = end
 
-    # Verifica se o ponto de início ou fim é uma parede
     if cost_matrix[start_y][start_x] == math.inf or cost_matrix[end_y][end_x] == math.inf:
-        return None, math.inf  # Caminho inválido
+        return None, math.inf
 
     # Calcula a matriz de heurísticas
     heuristic = heuristica_manhattan(cost_matrix, end)
 
-    # Inicializa a fila de prioridade (fronteira)
+    if heuristic[start_y][start_x] == math.inf or heuristic[end_y][end_x] == math.inf:
+        return None, math.inf
+
+    # Fronteira
     frontier = []
     heapq.heappush(frontier, (0, start_y, start_x))
 
-    # Dicionário para armazenar o custo do caminho até cada célula
+    # Custo do caminho até cada célula
     cost_so_far = {(start_y, start_x): 0}
 
-    # Dicionário para armazenar o caminho percorrido
+    # Caminho percorrido
     came_from = {(start_y, start_x): None}
 
     while frontier:
         _, current_y, current_x = heapq.heappop(frontier)
 
-        # Verifica se chegou ao objetivo
+        # Objetivo
         if (current_y, current_x) == (end_y, end_x):
             break
 
-        # Explora os vizinhos
         for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             next_y, next_x = current_y + dy, current_x + dx
 
             # Verifica se está dentro dos limites da matriz
             if 0 <= next_y < len(cost_matrix) and 0 <= next_x < len(cost_matrix[0]):
-                # Verifica se não é uma parede
                 if cost_matrix[next_y][next_x] == math.inf:
                     continue
 
-                # Calcula o custo do caminho até o próximo nó
+                # Custo até o próximo nó
                 new_cost = cost_so_far[(current_y, current_x)] + (1 if isinstance(cost_matrix[next_y][next_x], str) else cost_matrix[next_y][next_x])
 
                 # Se o próximo nó não foi visitado ou se encontrou um caminho mais barato
@@ -167,11 +193,10 @@ def a_star(cost_matrix, start, end):
         current = came_from[current]
     path.reverse()
 
-    # Retorna o caminho e o custo total
     return path, cost_so_far.get((end_y, end_x), math.inf)
 
 def main():
-    map_file = "laboratorio/laboratorio.txt"
+    map_file = "laboratorio/laboratorio2.txt"
     lab_map = read_map(map_file)
 
     custo_total = 0
@@ -208,7 +233,7 @@ def main():
             current_pos = pos
 
             screen.fill((0, 0, 0))
-            draw_map(screen, lab_map)
+            draw_map(screen, lab_map, -1, caminho)
             pygame.display.flip()
             pygame.time.wait(100)
 
@@ -221,7 +246,7 @@ def main():
                 running = False
 
         screen.fill((0, 0, 0))
-        draw_map(screen, lab_map)
+        draw_map(screen, lab_map, custo_total, caminho)
         pygame.display.flip()
 
     pygame.quit()
