@@ -37,7 +37,7 @@ def read_map(file_path):
 
     return [list(line.strip()) for line in lines]
 
-def draw_map(screen, map_matrix, custo, caminho):
+def draw_map(screen, map_matrix, custo, caminho, custo_atual):
     for y, line in enumerate(map_matrix):
         for x, cell in enumerate(line):
             color = COLORS.get(cell, (0, 0, 0))
@@ -62,15 +62,20 @@ def draw_map(screen, map_matrix, custo, caminho):
         # Renderiza cada linha separadamente
         text_surfaces = [font.render(line, True, (255, 0, 0)) for line in lines]
     else:
-        text_surfaces = [font.render("", True, (255, 0, 0))]  # Texto vazio se o caminho existir
+        text_surfaces = [font.render("", True, (255, 0, 0))]
 
-    screen.blit(text_surface, (10, 850))  # Custo na posição (10, 850)
+    if custo_atual != -1:
+        text_surface2 = font.render(f"Custo atual: {custo_atual}", True, (255, 255, 255))
+    else:
+        text_surface2 = font.render("", True, (255, 0, 0))
 
-    y_offset = 380  # Posição Y inicial
+    screen.blit(text_surface, (10, 850))
+
+    y_offset = 380
     for text_surface in text_surfaces:
         screen.blit(text_surface, (200, y_offset))
-        y_offset += 40  # Ajusta o espaçamento entre as linhas
-    # screen.blit(text_surface2, (280, 380))
+        y_offset += 40
+    screen.blit(text_surface2, (350, 850))
 
 def find_position(map_matrix, target):
     for y, line in enumerate(map_matrix):
@@ -196,7 +201,7 @@ def a_star(cost_matrix, start, end):
     return path, cost_so_far.get((end_y, end_x), math.inf)
 
 def main():
-    map_file = "laboratorio/laboratorio2.txt"
+    map_file = "laboratorio/laboratorio.txt"
     lab_map = read_map(map_file)
 
     custo_total = 0
@@ -216,6 +221,7 @@ def main():
         find_position(lab_map, '!')  # Saída
     ]
 
+    custo_atual = 0
     for objetivo in objetivos:
         print(f"Buscando para o objetivo: {objetivo}")
 
@@ -227,13 +233,16 @@ def main():
 
         print(f"Caminho encontrado: {caminho}, Custo: {custo}")
         custo_total = custo_total + custo
-
         for pos in caminho[1:]:
             update_map(lab_map, current_pos, pos)
             current_pos = pos
 
+            x, y = pos
+
+            custo_atual = custo_atual + (1 if isinstance(cost_matrix[x][y], str) else cost_matrix[x][y])
+
             screen.fill((0, 0, 0))
-            draw_map(screen, lab_map, -1, caminho)
+            draw_map(screen, lab_map, -1, caminho, custo_atual)
             pygame.display.flip()
             pygame.time.wait(100)
 
@@ -246,7 +255,7 @@ def main():
                 running = False
 
         screen.fill((0, 0, 0))
-        draw_map(screen, lab_map, custo_total, caminho)
+        draw_map(screen, lab_map, custo_total, caminho, -1)
         pygame.display.flip()
 
     pygame.quit()
